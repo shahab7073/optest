@@ -1,0 +1,42 @@
+/* Layout */
+.hero3d {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 40px 20px;
+  min-height: var(--hero3d-height, 520px);
+  position: relative;
+}
+
+.hero3d-col { min-width: 0; }
+
+.hero3d-visual { position: relative; }
+.hero3d-canvas {
+  position: relative;
+  width: 100%;
+  /* aspect-ratio is set inline style per instance */
+}
+.hero3d-canvas canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Copy side */
+.hero3d-title { margin: 0 0 12px; font-size: 42px; line-height: 1.1; }
+.hero3d-sub { margin: 0 0 20px; font-size: 18px; opacity: .85; }
+.hero3d-cta {
+  display: inline-block; padding: 12px 20px; border-radius: 6px;
+  background: #111; color: #fff; text-decoration: none;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .hero3d { grid-template-columns: 1fr; min-height: 440px; }
+  .hero3d-visual { order: -1; }
+  .hero3d-title { font-size: 34px; }
+}
+
+/* Optional: when JS disabled, show poster bg if set (not included by default) */
+.no-webgl .hero3d-canvas { display: none; }

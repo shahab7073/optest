@@ -1,0 +1,114 @@
+<section class="hero3d" style="--hero3d-height: {{ height }}px;">
+  <div class="hero3d-col hero3d-visual">
+    <div
+      id="hero3d-{{ module_id }}"
+      class="hero3d-canvas"
+      style="aspect-ratio: {{ aspect }};"
+      data-model="{{ model_url|e }}"
+      data-bg="{{ bg_color|e }}"
+      data-alpha="{{ alpha }}"
+      data-autorotate="{{ auto_rotate }}">
+    </div>
+  </div>
+
+  {% if title or subtitle or cta_text %}
+  <div class="hero3d-col hero3d-copy">
+    {% if title %}<h1 class="hero3d-title">{{ title }}</h1>{% endif %}
+    {% if subtitle %}<p class="hero3d-sub">{{ subtitle }}</p>{% endif %}
+    {% if cta_text and cta_link %}<a class="hero3d-cta" href="{{ cta_link }}">{{ cta_text }}</a>{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{# Three.js (ES Modules via CDN) #}
+<script type="module">
+  import * as THREE from 'https://unpkg.com/three@0.164.1/build/three.module.js';
+  import { OrbitControls } from 'https://unpkg.com/three@0.164.1/examples/jsm/controls/OrbitControls.js';
+  import { GLTFLoader } from 'https://unpkg.com/three@0.164.1/examples/jsm/loaders/GLTFLoader.js';
+
+  (function() {
+    const root = document.getElementById('hero3d-{{ module_id }}');
+    if (!root) return;
+
+    const modelURL = root.dataset.model;
+    const bgColor  = root.dataset.bg || '#000000';
+    const alpha    = root.dataset.alpha === '1';
+    const autoRot  = root.dataset.autorotate === '1';
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: alpha, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(root.clientWidth, root.clientHeight);
+    if (!alpha) {
+      const hex = parseInt(bgColor.replace('#','0x'), 16);
+      renderer.setClearColor(hex, 1);
+    }
+    root.appendChild(renderer.domElement);
+
+    // Scene + Camera
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, root.clientWidth / root.clientHeight, 0.1, 200);
+    camera.position.set(0.8, 0.6, 1.4);
+
+    // Light
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x222244, 0.9));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    dir.position.set(2, 3, 4);
+    scene.add(dir);
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 0.6;
+    controls.maxDistance = 3.5;
+    controls.autoRotate = autoRot;
+    controls.autoRotateSpeed = 0.7;
+
+    // Resize
+    const onResize = () => {
+      const w = root.clientWidth, h = root.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', () => requestAnimationFrame(onResize));
+
+    // Pause when offscreen
+    let isActive = true;
+    const io = new IntersectionObserver(entries => { isActive = entries[0].isIntersecting; }, { threshold: 0.05 });
+    io.observe(root);
+
+    // Load model
+    const loader = new GLTFLoader();
+    loader.load(modelURL, (gltf) => {
+      const model = gltf.scene;
+      model.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; }});
+      scene.add(model);
+
+      // Frame nicely
+      const box = new THREE.Box3().setFromObject(model);
+      const sizeVec = box.getSize(new THREE.Vector3());
+      const size = sizeVec.length();
+      const center = box.getCenter(new THREE.Vector3());
+
+      model.position.sub(center);
+
+      const fitDist = size / (2 * Math.tan((Math.PI * camera.fov) / 360));
+      camera.position.set(0, sizeVec.y * 0.1, fitDist * 1.2);
+      controls.update();
+    }, undefined, (err) => {
+      console.error('Hero3D GLTF load error', err);
+    });
+
+    // Animate
+    const tick = () => {
+      if (isActive) {
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  })();
+</script>
